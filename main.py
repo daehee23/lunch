@@ -32,29 +32,47 @@ ALLERGY_MAP = {
     19: "잣",
 }
 
-# 1. 고기류 키워드 정규식 (메뉴명 + 알레르기 번호 10, 15, 16)
+# 1. 고기류 정규식 (빨간색 하이라이트)
 MEAT_PATTERN = re.compile(
     r"(돼지|돈육|소고기|쇠고기|우육|닭|계육|오리|양고기|함박|떡갈비|너겟|탕수육|돈까스|돈가스|불고기|제육|장조림|갈비|보쌈|수육|소시지|소세지|햄|베이컨|\b10\b|\b15\b|\b16\b)"
 )
 
-# 2. 채소류 키워드 정규식 (나물, 샐러드, 쌈, 무침, 야채 등)
-VEG_PATTERN = re.compile(
-    r"(샐러드|나물|무침|겉절이|쌈|야채|채소|시금치|콩나물|숙주|오이|가지|부추|호박|가지|브로콜리|파채|상추|양배추|파프리카|더덕|도라지|우엉|연근)"
+# 2. 자율 메뉴 정규식 (초록색 하이라이트)
+SELF_PATTERN = re.compile(r"자율")
+
+# 3. 면류 정규식 (날짜 옆 🍜 이모지)
+NOODLE_PATTERN = re.compile(
+    r"(국수|우동|라면|짬뽕|짜장|자장|스파게티|파스타|소바|쫄면|비빔면|칼국수|수제비|당면|마라탕|쌀국수)"
 )
+
+# 4. 밥류 정규식 (날짜 옆 🍚 이모지)
+RICE_PATTERN = re.compile(r"(밥|라이스|리조또|덮밥|볶음밥|비빔밥|조밥|현미밥|흑미밥)")
 
 
 def highlight_dishes(dish_text):
-    """메뉴 성격에 따라 고기는 빨간색, 채소는 초록색으로 하이라이트합니다."""
+    """고기는 빨간색, '자율' 메뉴는 초록색으로 하이라이트합니다."""
     is_meat = bool(MEAT_PATTERN.search(dish_text))
-    is_veg = bool(VEG_PATTERN.search(dish_text))
+    is_self = bool(SELF_PATTERN.search(dish_text))
 
-    # 고기와 채소가 동시에 들어간 경우 고기 우선 또는 둘 다 표기
     if is_meat:
         return f" :red-background[**{dish_text}**] 🥩"
-    elif is_veg:
-        return f" :green-background[**{dish_text}**] 🥗"
+    elif is_self:
+        return f" :green-background[**{dish_text}**] 🌿"
 
     return dish_text
+
+
+def get_staple_emoji(day_meals):
+    """해당 날짜의 식단 전체를 분석하여 면류(🍜) 또는 밥류(🍚) 이모지를 반환합니다."""
+    all_text = ""
+    for dishes in day_meals.values():
+        all_text += " ".join(dishes) + " "
+
+    if NOODLE_PATTERN.search(all_text):
+        return " 🍜"
+    elif RICE_PATTERN.search(all_text):
+        return " 🍚"
+    return ""
 
 
 def replace_allergy_codes(dish_text, convert_to_text=True):
@@ -165,7 +183,7 @@ try:
                 dish, convert_to_text=show_allergen_names
             )
 
-            # 2. 메뉴 단위로 분리 후 고기/채소 색상 하이라이트 적용
+            # 2. 메뉴 단위로 분리 후 하이라이트 적용
             raw_lines = [
                 d.strip()
                 for d in formatted_dish.replace("<br/>", "\n").split("\n")
@@ -199,14 +217,17 @@ try:
                         and day == today.day
                     )
 
+                    # 밥/면 이모지 계산
+                    staple_icon = get_staple_emoji(day_meals)
+
                     with st.container(border=True):
                         if is_today:
                             st.markdown(
-                                f"**{month}월 {day}일 ({weekdays_kr[i]})** :orange-background[**TODAY**]"
+                                f"**{month}월 {day}일 ({weekdays_kr[i]})**{staple_icon} :orange-background[**TODAY**]"
                             )
                         else:
                             st.markdown(
-                                f"**{month}월 {day}일 ({weekdays_kr[i]})**"
+                                f"**{month}월 {day}일 ({weekdays_kr[i]})**{staple_icon}"
                             )
 
                         st.divider()
