@@ -32,17 +32,28 @@ ALLERGY_MAP = {
     19: "잣",
 }
 
-# 육류 강조용 키워드 정규식 패턴 (메뉴명 자체 키워드 + 알레르기 번호 10, 15, 16)
+# 1. 고기류 키워드 정규식 (메뉴명 + 알레르기 번호 10, 15, 16)
 MEAT_PATTERN = re.compile(
     r"(돼지|돈육|소고기|쇠고기|우육|닭|계육|오리|양고기|함박|떡갈비|너겟|탕수육|돈까스|돈가스|불고기|제육|장조림|갈비|보쌈|수육|소시지|소세지|햄|베이컨|\b10\b|\b15\b|\b16\b)"
 )
 
+# 2. 채소류 키워드 정규식 (나물, 샐러드, 쌈, 무침, 야채 등)
+VEG_PATTERN = re.compile(
+    r"(샐러드|나물|무침|겉절이|쌈|야채|채소|시금치|콩나물|숙주|오이|가지|부추|호박|가지|브로콜리|파채|상추|양배추|파프리카|더덕|도라지|우엉|연근)"
+)
 
-def highlight_meat_dishes(dish_text):
-    """메뉴에 고기류 키워드가 포함되어 있는지 확인하여 강조 표시합니다."""
-    if MEAT_PATTERN.search(dish_text):
-        # Streamlit 텍스트 하이라이트 표현식 (:orange-background[텍스트])
-        return f" :orange-background[**{dish_text}**] 🥩"
+
+def highlight_dishes(dish_text):
+    """메뉴 성격에 따라 고기는 빨간색, 채소는 초록색으로 하이라이트합니다."""
+    is_meat = bool(MEAT_PATTERN.search(dish_text))
+    is_veg = bool(VEG_PATTERN.search(dish_text))
+
+    # 고기와 채소가 동시에 들어간 경우 고기 우선 또는 둘 다 표기
+    if is_meat:
+        return f" :red-background[**{dish_text}**] 🥩"
+    elif is_veg:
+        return f" :green-background[**{dish_text}**] 🥗"
+
     return dish_text
 
 
@@ -154,13 +165,13 @@ try:
                 dish, convert_to_text=show_allergen_names
             )
 
-            # 2. 메뉴 단위로 분리 후 육류 메뉴 강조 적용
+            # 2. 메뉴 단위로 분리 후 고기/채소 색상 하이라이트 적용
             raw_lines = [
                 d.strip()
                 for d in formatted_dish.replace("<br/>", "\n").split("\n")
                 if d.strip()
             ]
-            dish_lines = [highlight_meat_dishes(d) for d in raw_lines]
+            dish_lines = [highlight_dishes(d) for d in raw_lines]
 
             meal_dict.setdefault(ymd, {})[meal_type] = dish_lines
 
